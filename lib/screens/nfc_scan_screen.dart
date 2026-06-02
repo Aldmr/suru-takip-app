@@ -259,38 +259,54 @@ class _NfcScanScreenState extends State<NfcScanScreen>
                                   onTap: () async {
                                     final available = await NfcManager.instance
                                         .isAvailable();
+                                    if (!mounted) return;
                                     if (!available) {
-                                      if (mounted)
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'NFC cihazınız desteklemiyor',
-                                            ),
-                                          ),
-                                        );
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('NFC cihazınız desteklemiyor'),
+                                        ),
+                                      );
                                       return;
                                     }
 
                                     showDialog(
                                       context: context,
-                                      barrierDismissible: false,
-                                      builder: (c) => const Center(
-                                        child: CircularProgressIndicator(),
+                                      barrierDismissible: true,
+                                      builder: (c) => AlertDialog(
+                                        backgroundColor: AppColors.cream,
+                                        content: const Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            CircularProgressIndicator(color: AppColors.soil),
+                                            SizedBox(height: 16),
+                                            Text(
+                                              'Etiketi telefona yaklaştır...',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(color: AppColors.soil),
+                                            ),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () {
+                                              NfcManager.instance.stopSession();
+                                              Navigator.of(c).pop();
+                                            },
+                                            child: const Text('İptal', style: TextStyle(color: AppColors.soil)),
+                                          ),
+                                        ],
                                       ),
                                     );
 
-                                    String? uid;
                                     try {
                                       await NfcManager.instance.startSession(
                                         onDiscovered: (tag) async {
                                           final data = tag.data;
                                           dynamic idBytes;
 
-                                          if (data.containsKey('nfca'))
-                                            idBytes =
-                                                data['nfca']?['identifier'];
+                                          if (data.containsKey('nfca')) {
+                                            idBytes = data['nfca']?['identifier'];
+                                          }
                                           idBytes ??= data['identifier'];
 
                                           if (idBytes == null) {
@@ -298,91 +314,77 @@ class _NfcScanScreenState extends State<NfcScanScreen>
                                               if (node is Map) {
                                                 node.forEach((k, v) {
                                                   if (idBytes != null) return;
-                                                  if (k == 'identifier')
+                                                  if (k == 'identifier') {
                                                     idBytes = v;
-                                                  else
+                                                  } else {
                                                     search(v);
+                                                  }
                                                 });
                                               }
                                             }
-
                                             search(data);
                                           }
 
+                                          String? uid;
                                           if (idBytes != null) {
                                             try {
                                               final bytes = idBytes is Iterable
                                                   ? List<int>.from(idBytes)
-                                                  : (idBytes as Uint8List)
-                                                        .toList();
+                                                  : (idBytes as Uint8List).toList();
                                               uid = bytes
-                                                  .map(
-                                                    (b) => b
-                                                        .toRadixString(16)
-                                                        .padLeft(2, '0')
-                                                        .toUpperCase(),
-                                                  )
+                                                  .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
                                                   .join(':');
                                             } catch (_) {
                                               uid = idBytes.toString();
                                             }
-                                          } else {
-                                            uid = null;
                                           }
 
-                                          await NfcManager.instance
-                                              .stopSession();
+                                          await NfcManager.instance.stopSession();
+
+                                          if (!mounted) return;
+                                          Navigator.of(context).pop(); // dialog'u kapat
+
+                                          if (uid == null) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Etiket okunamadı')),
+                                            );
+                                            return;
+                                          }
+
+                                          final sheep = await DatabaseHelper.instance.getSheepByNfc(uid);
+                                          if (!mounted) return;
+                                          if (sheep != null) {
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => SheepProfileScreen(sheep: sheep),
+                                              ),
+                                            );
+                                          } else {
+                                            final res = await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => AddEditSheepScreen(initialNfc: uid!),
+                                              ),
+                                            );
+                                            if (!mounted) return;
+                                            if (res is Sheep) {
+                                              await Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => SheepProfileScreen(sheep: res),
+                                                ),
+                                              );
+                                            }
+                                          }
                                         },
                                       );
                                     } catch (e) {
-                                      uid = null;
-                                    }
-
-                                    if (!mounted) return;
-                                    Navigator.of(context).pop();
-
-                                    if (uid == null) {
                                       if (!mounted) return;
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Etiket okunamadı'),
-                                        ),
+                                      Navigator.of(context).pop();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('NFC hatası: $e')),
                                       );
-                                      return;
-                                    }
-
-                                    final sheep = await DatabaseHelper.instance
-                                        .getSheepByNfc(uid!);
-                                    if (!mounted) return;
-                                    if (sheep != null) {
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              SheepProfileScreen(sheep: sheep),
-                                        ),
-                                      );
-                                    } else {
-                                      final res = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => AddEditSheepScreen(
-                                            initialNfc: uid!,
-                                          ),
-                                        ),
-                                      );
-                                      if (!mounted) return;
-                                      if (res == true) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Kayıt oluşturuldu'),
-                                          ),
-                                        );
-                                      }
                                     }
                                   },
                                   child: Container(
