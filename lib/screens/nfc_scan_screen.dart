@@ -62,6 +62,8 @@ class _NfcScanScreenState extends State<NfcScanScreen>
         if (mounted) _controllers[i].repeat(reverse: true);
       });
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startNfcSession());
   }
 
   @override
@@ -69,7 +71,98 @@ class _NfcScanScreenState extends State<NfcScanScreen>
     for (final c in _controllers) {
       c.dispose();
     }
+    NfcManager.instance.stopSession();
     super.dispose();
+  }
+
+  String? _extractUid(Map<String, dynamic> data) {
+    dynamic idBytes;
+    if (data.containsKey('nfca')) idBytes = data['nfca']?['identifier'];
+    idBytes ??= data['identifier'];
+    if (idBytes == null) {
+      void search(dynamic node) {
+        if (node is Map) {
+          node.forEach((k, v) {
+            if (idBytes != null) return;
+            if (k == 'identifier') idBytes = v;
+            else search(v);
+          });
+        }
+      }
+      search(data);
+    }
+    if (idBytes == null) return null;
+    try {
+      final bytes = idBytes is Iterable
+          ? List<int>.from(idBytes)
+          : (idBytes as Uint8List).toList();
+      return bytes.map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase()).join(':');
+    } catch (_) {
+      return idBytes.toString();
+    }
+  }
+
+  Future<void> _startNfcSession() async {
+    final available = await NfcManager.instance.isAvailable();
+    if (!mounted) return;
+    if (!available) return;
+
+    try {
+      await NfcManager.instance.startSession(
+        pollingOptions: {NfcPollingOption.iso14443},
+        alertMessage: 'Etiketi telefonun üst kısmına (kamera tarafına) yaklaştır',
+        invalidateAfterFirstRead: true,
+        onError: (error) async {
+          if (!mounted) return;
+          if (error.type != NfcErrorType.sessionTimeout) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('NFC hatası: ${error.message}')),
+            );
+          }
+        },
+        onDiscovered: (tag) async {
+          final uid = _extractUid(tag.data);
+          await NfcManager.instance.stopSession();
+          if (!mounted) return;
+
+          if (uid == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Etiket okunamadı')),
+            );
+            _startNfcSession();
+            return;
+          }
+
+          final sheep = await DatabaseHelper.instance.getSheepByNfc(uid);
+          if (!mounted) return;
+          if (sheep != null) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => SheepProfileScreen(sheep: sheep)),
+            );
+          } else {
+            final res = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AddEditSheepScreen(initialNfc: uid)),
+            );
+            if (!mounted) return;
+            if (res is Sheep) {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => SheepProfileScreen(sheep: res)),
+              );
+            }
+          }
+
+          if (mounted) _startNfcSession();
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('NFC hatası: $e')),
+      );
+    }
   }
 
   Future<void> _handleScannedUid(String uid) async {
@@ -254,139 +347,9 @@ class _NfcScanScreenState extends State<NfcScanScreen>
                                     ),
                                   ),
                                 ),
-                                // Center button - starts NFC session
+                                // Center button - restarts NFC session on tap
                                 GestureDetector(
-                                  onTap: () async {
-                                    final available = await NfcManager.instance
-                                        .isAvailable();
-                                    if (!mounted) return;
-                                    if (!available) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('NFC cihazınız desteklemiyor'),
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: true,
-                                      builder: (c) => AlertDialog(
-                                        backgroundColor: AppColors.cream,
-                                        content: const Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            CircularProgressIndicator(color: AppColors.soil),
-                                            SizedBox(height: 16),
-                                            Text(
-                                              'Etiketi telefona yaklaştır...',
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(color: AppColors.soil),
-                                            ),
-                                          ],
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () {
-                                              NfcManager.instance.stopSession();
-                                              Navigator.of(c).pop();
-                                            },
-                                            child: const Text('İptal', style: TextStyle(color: AppColors.soil)),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-
-                                    try {
-                                      await NfcManager.instance.startSession(
-                                        onDiscovered: (tag) async {
-                                          final data = tag.data;
-                                          dynamic idBytes;
-
-                                          if (data.containsKey('nfca')) {
-                                            idBytes = data['nfca']?['identifier'];
-                                          }
-                                          idBytes ??= data['identifier'];
-
-                                          if (idBytes == null) {
-                                            void search(dynamic node) {
-                                              if (node is Map) {
-                                                node.forEach((k, v) {
-                                                  if (idBytes != null) return;
-                                                  if (k == 'identifier') {
-                                                    idBytes = v;
-                                                  } else {
-                                                    search(v);
-                                                  }
-                                                });
-                                              }
-                                            }
-                                            search(data);
-                                          }
-
-                                          String? uid;
-                                          if (idBytes != null) {
-                                            try {
-                                              final bytes = idBytes is Iterable
-                                                  ? List<int>.from(idBytes)
-                                                  : (idBytes as Uint8List).toList();
-                                              uid = bytes
-                                                  .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
-                                                  .join(':');
-                                            } catch (_) {
-                                              uid = idBytes.toString();
-                                            }
-                                          }
-
-                                          await NfcManager.instance.stopSession();
-
-                                          if (!mounted) return;
-                                          Navigator.of(context).pop(); // dialog'u kapat
-
-                                          if (uid == null) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Etiket okunamadı')),
-                                            );
-                                            return;
-                                          }
-
-                                          final sheep = await DatabaseHelper.instance.getSheepByNfc(uid);
-                                          if (!mounted) return;
-                                          if (sheep != null) {
-                                            await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => SheepProfileScreen(sheep: sheep),
-                                              ),
-                                            );
-                                          } else {
-                                            final res = await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => AddEditSheepScreen(initialNfc: uid!),
-                                              ),
-                                            );
-                                            if (!mounted) return;
-                                            if (res is Sheep) {
-                                              await Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) => SheepProfileScreen(sheep: res),
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        },
-                                      );
-                                    } catch (e) {
-                                      if (!mounted) return;
-                                      Navigator.of(context).pop();
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('NFC hatası: $e')),
-                                      );
-                                    }
-                                  },
+                                  onTap: _startNfcSession,
                                   child: Container(
                                     width: 60,
                                     height: 60,
