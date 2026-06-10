@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../widgets/app_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -95,9 +96,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Dışa aktarma hatası: $e'), backgroundColor: AppColors.rust),
-        );
+        showAppNotification(context, 'Dışa aktarma hatası: $e', isError: true);
       }
     }
     if (mounted) setState(() => _isExporting = false);
@@ -344,7 +343,7 @@ class _ExportButton extends StatelessWidget {
               const Text('📤', style: TextStyle(fontSize: 18)),
             const SizedBox(width: 10),
             Text(
-              isExporting ? 'Hazırlanıyor...' : 'CSV Olarak Dışa Aktar',
+              isExporting ? 'Hazırlanıyor...' : 'Tablo Olarak Dışa Aktar',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

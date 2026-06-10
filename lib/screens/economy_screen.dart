@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../widgets/app_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -95,9 +96,7 @@ class _EconomyScreenState extends State<EconomyScreen> {
       await Share.shareXFiles([XFile(file.path)], subject: 'SürüTakip — Ekonomi Raporu');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Dışa aktarma hatası: $e'), backgroundColor: AppColors.rust),
-        );
+        showAppNotification(context, 'Dışa aktarma hatası: $e', isError: true);
       }
     }
   }
@@ -186,7 +185,7 @@ class _EconomyScreenState extends State<EconomyScreen> {
                           children: [
                             Text('📥', style: TextStyle(fontSize: 16)),
                             SizedBox(width: 8),
-                            Text('CSV Olarak Dışa Aktar',
+                            Text('Tablo Olarak Dışa Aktar',
                                 style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,

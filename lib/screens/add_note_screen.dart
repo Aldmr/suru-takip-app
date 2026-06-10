@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_notification.dart';
 import '../models/models.dart';
 import '../services/database_helper.dart';
 
@@ -58,9 +59,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
 
   Future<void> _save() async {
     if (_noteController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Not alanı boş bırakılamaz')),
-      );
+      showAppNotification(context, 'Not alanı boş bırakılamaz', isError: true);
       return;
     }
     setState(() => _isSaving = true);

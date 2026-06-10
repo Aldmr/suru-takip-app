@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_notification.dart';
 import '../models/models.dart';
 import '../services/database_helper.dart';
 import '../services/farm_manager.dart';
@@ -99,13 +100,7 @@ class _AddEditSheepScreenState extends State<AddEditSheepScreen> {
     if (taken) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('"$earTag" küpe numarası zaten kayıtlı. Her koyunun küpesi benzersiz olmalıdır.'),
-            backgroundColor: Colors.red.shade700,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        showAppNotification(context, '"$earTag" küpe numarası zaten kayıtlı. Her koyunun küpesi benzersiz olmalıdır.', isError: true);
       }
       return;
     }

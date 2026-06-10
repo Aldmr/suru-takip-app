@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_notification.dart';
 import '../models/models.dart';
 import '../widgets/bottom_nav.dart';
 import '../services/database_helper.dart';
@@ -270,12 +271,143 @@ class _SheepListScreenState extends State<SheepListScreen> {
       if (!mounted) return;
       _exitSelection();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$savedCount koyuna aşı kaydedildi'),
-            backgroundColor: AppColors.sage,
-          ),
-        );
+        showAppNotification(context, '$savedCount koyuna aşı kaydedildi');
+      }
+    }
+  }
+
+  Future<void> _showBulkGroupSheet() async {
+    final groupCtrl = TextEditingController();
+    String? selectedGroup;
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: AppColors.wool,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36, height: 4,
+                      decoration: BoxDecoration(color: AppColors.mist, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    '${_selectedIds.length} Koyuna Grup Ata',
+                    style: const TextStyle(fontFamily: 'DMSerifDisplay', fontSize: 20, color: AppColors.soil),
+                  ),
+                  if (_groups.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    const Text('Mevcut Gruplar',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.mutedText, letterSpacing: 0.3)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: _groups.map((g) {
+                        final isActive = selectedGroup == g;
+                        return GestureDetector(
+                          onTap: () => setSheet(() {
+                            selectedGroup = isActive ? null : g;
+                            groupCtrl.text = isActive ? '' : g;
+                          }),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isActive ? AppColors.bark : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isActive ? AppColors.bark : const Color(0xFFE8DFD0),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              g,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isActive ? AppColors.straw : AppColors.bark,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  const Text('Yeni Grup Adı',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.mutedText, letterSpacing: 0.3)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: groupCtrl,
+                    autofocus: _groups.isEmpty,
+                    textCapitalization: TextCapitalization.words,
+                    style: const TextStyle(fontSize: 13, color: AppColors.soil),
+                    onChanged: (v) => setSheet(() => selectedGroup = null),
+                    decoration: InputDecoration(
+                      hintText: 'Örn: Merinos, Doğu Ağılı...',
+                      hintStyle: const TextStyle(color: AppColors.mutedText),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.bark,
+                        foregroundColor: AppColors.straw,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () {
+                        final name = groupCtrl.text.trim().isNotEmpty
+                            ? groupCtrl.text.trim()
+                            : selectedGroup;
+                        if (name == null || name.isEmpty) return;
+                        Navigator.of(ctx).pop(true);
+                      },
+                      child: const Text('Kaydet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    final groupName = groupCtrl.text.trim().isNotEmpty
+        ? groupCtrl.text.trim()
+        : selectedGroup;
+    final savedIds = _selectedIds.toList();
+    final savedCount = savedIds.length;
+
+    if (ok == true && groupName != null && groupName.isNotEmpty) {
+      await DatabaseHelper.instance.bulkSetGroup(savedIds, groupName);
+      if (!mounted) return;
+      _exitSelection();
+      await _loadSheep();
+      if (mounted) {
+        showAppNotification(context, '$savedCount koyuna "$groupName" grubu atandı');
       }
     }
   }
@@ -473,12 +605,7 @@ class _SheepListScreenState extends State<SheepListScreen> {
       _exitSelection();
       await _loadSheep();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$savedCount koyun satışı kaydedildi'),
-            backgroundColor: AppColors.sage,
-          ),
-        );
+        showAppNotification(context, '$savedCount koyun satışı kaydedildi');
       }
     }
   }
@@ -753,6 +880,7 @@ class _SheepListScreenState extends State<SheepListScreen> {
               onCancel: _exitSelection,
               onVaccine: _showBulkVaccineSheet,
               onSale: _showBulkSaleSheet,
+              onGroup: _showBulkGroupSheet,
             ),
           AppBottomNav(currentIndex: widget.navIndex, onTap: widget.onNavTap),
         ],
@@ -1001,59 +1129,126 @@ class _SelectionBar extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onVaccine;
   final VoidCallback onSale;
+  final VoidCallback onGroup;
 
   const _SelectionBar({
     required this.count,
     required this.onCancel,
     required this.onVaccine,
     required this.onSale,
+    required this.onGroup,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Color(0x0F000000), width: 1)),
+        boxShadow: [BoxShadow(color: Color(0x0A000000), blurRadius: 8, offset: Offset(0, -2))],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          GestureDetector(
-            onTap: onCancel,
-            child: const Icon(Icons.close, color: AppColors.mutedText, size: 22),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: onCancel,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0EBE3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.close, color: AppColors.bark, size: 16),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '$count koyun seçildi',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.soil),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '$count koyun seçildi',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.soil),
-            ),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.soil,
-              foregroundColor: AppColors.straw,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            ),
-            onPressed: count == 0 ? null : onVaccine,
-            icon: const Text('💉', style: TextStyle(fontSize: 13)),
-            label: const Text('Toplu Aşı', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.sage,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            ),
-            onPressed: count == 0 ? null : onSale,
-            icon: const Text('💰', style: TextStyle(fontSize: 13)),
-            label: const Text('Toplu Sat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _BarButton(
+                emoji: '💉',
+                label: 'Toplu Aşı',
+                color: AppColors.soil,
+                textColor: AppColors.straw,
+                onTap: count == 0 ? null : onVaccine,
+              ),
+              const SizedBox(width: 8),
+              _BarButton(
+                emoji: '📂',
+                label: 'Grup Ekle',
+                color: AppColors.bark,
+                textColor: AppColors.straw,
+                onTap: count == 0 ? null : onGroup,
+              ),
+              const SizedBox(width: 8),
+              _BarButton(
+                emoji: '💰',
+                label: 'Toplu Sat',
+                color: AppColors.sage,
+                textColor: Colors.white,
+                onTap: count == 0 ? null : onSale,
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BarButton extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final Color color;
+  final Color textColor;
+  final VoidCallback? onTap;
+
+  const _BarButton({
+    required this.emoji,
+    required this.label,
+    required this.color,
+    required this.textColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            color: onTap == null ? color.withValues(alpha: 0.4) : color,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 18)),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

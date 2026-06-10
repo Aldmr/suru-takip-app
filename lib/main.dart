@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/sheep_list_screen.dart';
@@ -8,6 +9,9 @@ import 'screens/nfc_scan_screen.dart';
 import 'screens/economy_screen.dart';
 import 'services/database_helper.dart';
 import 'services/farm_manager.dart';
+import 'services/user_preferences.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,9 +19,13 @@ Future<void> main() async {
     statusBarBrightness: Brightness.light,
   ));
 
-  // Initialize DB and seed demo data if needed
+  await Supabase.initialize(
+    url: 'https://ymbxahznnhxplwjwewxr.supabase.co',
+    publishableKey: 'sb_publishable_4nwPecbnCq-2abqqbtuBBg_15hXQZOF',
+  );
+
   await DatabaseHelper.instance.database;
-  await DatabaseHelper.instance.ensureDemoData();
+  await UserPreferences.instance.init();
   await FarmManager.instance.init();
 
   runApp(const SuruTakipApp());
@@ -39,8 +47,40 @@ class SuruTakipApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('tr', 'TR')],
-      home: const AppShell(),
+      home: const AppRoot(),
     );
+  }
+}
+
+class AppRoot extends StatefulWidget {
+  const AppRoot({super.key});
+
+  @override
+  State<AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<AppRoot> {
+  bool _showSplash = true;
+  late bool _onboarded;
+
+  @override
+  void initState() {
+    super.initState();
+    _onboarded = UserPreferences.instance.isOnboardingDone;
+  }
+
+  void _onSplashComplete() => setState(() => _showSplash = false);
+  void _onOnboardingComplete() => setState(() => _onboarded = true);
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showSplash) {
+      return SplashScreen(onAnimationComplete: _onSplashComplete);
+    }
+    if (!_onboarded) {
+      return OnboardingScreen(onComplete: _onOnboardingComplete);
+    }
+    return const AppShell();
   }
 }
 

@@ -21,13 +21,13 @@ class AppBottomNav extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 60,
+          height: 70,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NavItem(icon: '🏠', label: 'Ana Sayfa', index: 0, current: currentIndex, onTap: onTap),
               _NavItem(icon: '🐑', label: 'Sürü', index: 1, current: currentIndex, onTap: onTap),
-              _NavItem(icon: '📡', label: 'Küpe Tara', index: 2, current: currentIndex, onTap: onTap),
+              _NavItem(icon: '🏷️', label: 'Tara', index: 2, current: currentIndex, onTap: onTap),
               _NavItem(icon: '💰', label: 'Ekonomi', index: 3, current: currentIndex, onTap: onTap),
             ],
           ),
@@ -62,18 +62,18 @@ class _NavItem extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.soil.withOpacity(0.07) : Colors.transparent,
+          color: isActive ? AppColors.soil.withValues(alpha: 0.07) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(icon, style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 2),
+            Text(icon, style: const TextStyle(fontSize: 22)),
+            const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: isActive ? AppColors.soil : AppColors.mutedText,
                 letterSpacing: 0.3,

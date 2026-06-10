@@ -3,6 +3,7 @@ import '../models/models.dart';
 import '../services/database_helper.dart';
 import '../services/farm_manager.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_notification.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -38,9 +39,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Future<void> _save() async {
     final amount = double.tryParse(_amountCtrl.text.trim().replaceAll(',', '.'));
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Geçerli bir tutar girin'), backgroundColor: AppColors.rust),
-      );
+      showAppNotification(context, 'Geçerli bir tutar girin', isError: true);
       return;
     }
     setState(() => _isSaving = true);

@@ -110,53 +110,6 @@ class Sheep {
     );
   }
 
-  // Demo data
-  static List<Sheep> demoList = [
-    Sheep(
-      id: 1,
-      nfcUid: '04:A3:2F:1B:9C:00:E1',
-      earTag: 'TR-2021-0042',
-      name: 'Pamuq',
-      birthDate: DateTime(2021, 3, 15),
-      gender: 'female',
-      breed: 'Merinos',
-      status: 'pregnant',
-      lastWeight: 42.0,
-    ),
-    Sheep(
-      id: 2,
-      nfcUid: '04:B1:4A:2C:8D:01:F2',
-      earTag: 'TR-2020-0018',
-      name: 'Karabaş',
-      birthDate: DateTime(2020, 6, 10),
-      gender: 'male',
-      breed: 'Kıvırcık',
-      status: 'active',
-      lastWeight: 58.5,
-    ),
-    Sheep(
-      id: 3,
-      nfcUid: '04:C2:5B:3D:9E:02:G3',
-      earTag: 'TR-2022-0091',
-      name: 'Sarıkız',
-      birthDate: DateTime(2022, 1, 22),
-      gender: 'female',
-      breed: 'Merinos',
-      status: 'sick',
-      lastWeight: 38.0,
-    ),
-    Sheep(
-      id: 4,
-      nfcUid: '04:D3:6C:4E:AF:03:H4',
-      earTag: 'TR-2023-0007',
-      name: 'Bulut',
-      birthDate: DateTime(2023, 5, 3),
-      gender: 'male',
-      breed: 'Akkaraman',
-      status: 'active',
-      lastWeight: 31.0,
-    ),
-  ];
 }
 
 // ── Health Record Model ───────────────────────────────────────────────────────
@@ -183,32 +136,6 @@ class HealthRecord {
     this.status = 'done',
   });
 
-  static List<HealthRecord> demoList = [
-    HealthRecord(
-      id: 1,
-      sheepId: 1,
-      type: 'vaccine',
-      name: 'Brucellosis',
-      date: DateTime(2024, 1, 10),
-      status: 'done',
-    ),
-    HealthRecord(
-      id: 2,
-      sheepId: 1,
-      type: 'vaccine',
-      name: 'Enterotoksemi',
-      date: DateTime(2026, 5, 28),
-      status: 'pending',
-    ),
-    HealthRecord(
-      id: 3,
-      sheepId: 1,
-      type: 'vaccine',
-      name: 'Şap',
-      date: DateTime(2026, 5, 25),
-      status: 'late',
-    ),
-  ];
 }
 
 // ── Weight Record Model ───────────────────────────────────────────────────────
@@ -227,17 +154,6 @@ class WeightRecord {
     this.notes,
   });
 
-  static List<WeightRecord> demoList = [
-    WeightRecord(id: 1, sheepId: 1, date: DateTime(2025, 11, 1), weightKg: 36.0),
-    WeightRecord(id: 2, sheepId: 1, date: DateTime(2025, 12, 1), weightKg: 37.5),
-    WeightRecord(id: 3, sheepId: 1, date: DateTime(2026, 1, 1), weightKg: 38.5),
-    WeightRecord(id: 4, sheepId: 1, date: DateTime(2026, 2, 1), weightKg: 39.5),
-    WeightRecord(id: 5, sheepId: 1, date: DateTime(2026, 3, 1), weightKg: 40.5),
-    WeightRecord(id: 6, sheepId: 1, date: DateTime(2026, 4, 1), weightKg: 41.0),
-    WeightRecord(id: 7, sheepId: 1, date: DateTime(2026, 5, 1), weightKg: 39.0),
-    WeightRecord(id: 8, sheepId: 1, date: DateTime(2026, 5, 15), weightKg: 41.0),
-    WeightRecord(id: 9, sheepId: 1, date: DateTime(2026, 5, 28), weightKg: 42.5),
-  ];
 }
 
 // ── Breeding Record Model ─────────────────────────────────────────────────────
@@ -249,6 +165,7 @@ class BreedingRecord {
   final DateTime? expectedBirth;
   final int? lambCount;
   final String? partnerUid;
+  final int? partnerSheepId;
   final String? notes;
 
   const BreedingRecord({
@@ -259,6 +176,7 @@ class BreedingRecord {
     this.expectedBirth,
     this.lambCount,
     this.partnerUid,
+    this.partnerSheepId,
     this.notes,
   });
 }
@@ -352,18 +270,4 @@ class AlertItem {
     this.isGreen = false,
   });
 
-  static List<AlertItem> demoList = const [
-    AlertItem(
-      icon: '💉',
-      title: '7 koyunun aşısı bugün',
-      subtitle: 'Brucellosis hatırlatma dozu',
-      isGreen: false,
-    ),
-    AlertItem(
-      icon: '🐑',
-      title: 'Pamuq — doğum yaklaşıyor',
-      subtitle: 'Tahmini: 3–5 gün içinde',
-      isGreen: true,
-    ),
-  ];
 }

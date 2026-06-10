@@ -17,7 +17,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -86,6 +86,7 @@ class DatabaseHelper {
         expectedBirth TEXT,
         lambCount INTEGER,
         partnerUid TEXT,
+        partnerSheepId INTEGER,
         notes TEXT
       )
     ''');
@@ -178,6 +179,12 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE sheep ADD COLUMN motherId INTEGER');
       await db.execute('ALTER TABLE sheep ADD COLUMN fatherId INTEGER');
       await db.execute('ALTER TABLE sheep ADD COLUMN birthRecordId INTEGER');
+    }
+
+    if (oldVersion < 8) {
+      await db.execute(
+        'ALTER TABLE breeding_records ADD COLUMN partnerSheepId INTEGER',
+      );
     }
 
     if (oldVersion < 4) {
@@ -578,6 +585,16 @@ class DatabaseHelper {
     }, where: 'id = ?', whereArgs: [s.id]);
   }
 
+  Future<void> bulkSetGroup(List<int> sheepIds, String? groupName) async {
+    if (sheepIds.isEmpty) return;
+    final db = await database;
+    final placeholders = sheepIds.map((_) => '?').join(',');
+    await db.rawUpdate(
+      'UPDATE sheep SET groupName = ? WHERE id IN ($placeholders)',
+      [groupName, ...sheepIds],
+    );
+  }
+
   Future<int> deleteSheep(int id) async {
     final db = await database;
     return await db.delete('sheep', where: 'id = ?', whereArgs: [id]);
@@ -708,6 +725,7 @@ class DatabaseHelper {
       'expectedBirth': r.expectedBirth?.toIso8601String(),
       'lambCount': r.lambCount,
       'partnerUid': r.partnerUid,
+      'partnerSheepId': r.partnerSheepId,
       'notes': r.notes,
     });
   }
@@ -728,6 +746,7 @@ class DatabaseHelper {
       expectedBirth: r['expectedBirth'] == null ? null : DateTime.tryParse(r['expectedBirth'] as String),
       lambCount: r['lambCount'] as int?,
       partnerUid: r['partnerUid'] as String?,
+      partnerSheepId: r['partnerSheepId'] as int?,
       notes: r['notes'] as String?,
     )).toList();
   }
@@ -1040,39 +1059,60 @@ class DatabaseHelper {
         createdAt: DateTime.parse(r['createdAt'] as String),
       );
 
-  // --- Bootstrap demo data if sheep table empty ---
-  Future<void> ensureDemoData() async {
+  // --- Cloud backup: export / import ---
+  Future<Map<String, dynamic>> exportAllData() async {
     final db = await database;
-    final countRes = await db.rawQuery('SELECT COUNT(*) as c FROM sheep');
-    final c = Sqflite.firstIntValue(countRes) ?? 0;
-    if (c > 0) return;
-
-    final farmId = await insertFarm(const Farm(name: 'Ertuğrul Çiftliği'));
-
-    for (final s in Sheep.demoList) {
-      final id = await insertSheep(s.copyWith(farmId: farmId));
-      if (s.id == 1) {
-        for (final h in HealthRecord.demoList) {
-          await insertHealthRecord(HealthRecord(
-            sheepId: id,
-            type: h.type,
-            name: h.name,
-            date: h.date,
-            nextDate: h.nextDate,
-            vetName: h.vetName,
-            notes: h.notes,
-            status: h.status,
-          ));
-        }
-        for (final w in WeightRecord.demoList) {
-          await insertWeightRecord(WeightRecord(
-            sheepId: id,
-            date: w.date,
-            weightKg: w.weightKg,
-            notes: w.notes,
-          ));
-        }
-      }
-    }
+    return {
+      'version': 1,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'farms': await db.query('farms'),
+      'sheep': await db.query('sheep'),
+      'health_records': await db.query('health_records'),
+      'weight_records': await db.query('weight_records'),
+      'breeding_records': await db.query('breeding_records'),
+      'financial_transactions': await db.query('financial_transactions'),
+      'transaction_sheep': await db.query('transaction_sheep'),
+      'sheep_notes': await db.query('sheep_notes'),
+    };
   }
+
+  Future<void> importAllData(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('transaction_sheep');
+      await txn.delete('sheep_notes');
+      await txn.delete('breeding_records');
+      await txn.delete('weight_records');
+      await txn.delete('health_records');
+      await txn.delete('financial_transactions');
+      await txn.delete('sheep');
+      await txn.delete('farms');
+
+      for (final row in (data['farms'] as List? ?? [])) {
+        await txn.insert('farms', Map<String, dynamic>.from(row as Map));
+      }
+      for (final row in (data['sheep'] as List? ?? [])) {
+        await txn.insert('sheep', Map<String, dynamic>.from(row as Map));
+      }
+      for (final row in (data['health_records'] as List? ?? [])) {
+        await txn.insert('health_records', Map<String, dynamic>.from(row as Map));
+      }
+      for (final row in (data['weight_records'] as List? ?? [])) {
+        await txn.insert('weight_records', Map<String, dynamic>.from(row as Map));
+      }
+      for (final row in (data['breeding_records'] as List? ?? [])) {
+        await txn.insert('breeding_records', Map<String, dynamic>.from(row as Map));
+      }
+      for (final row in (data['financial_transactions'] as List? ?? [])) {
+        await txn.insert('financial_transactions', Map<String, dynamic>.from(row as Map));
+      }
+      for (final row in (data['transaction_sheep'] as List? ?? [])) {
+        await txn.insert('transaction_sheep', Map<String, dynamic>.from(row as Map));
+      }
+      for (final row in (data['sheep_notes'] as List? ?? [])) {
+        await txn.insert('sheep_notes', Map<String, dynamic>.from(row as Map));
+      }
+    });
+  }
+
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_notification.dart';
 import '../models/models.dart';
 import '../services/database_helper.dart';
 
@@ -125,9 +126,7 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
 
   Future<void> _save() async {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Ad alanı boş bırakılamaz')));
+      showAppNotification(context, 'Ad alanı boş bırakılamaz', isError: true);
       return;
     }
     setState(() => _isSaving = true);

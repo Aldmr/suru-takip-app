@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_notification.dart';
 import '../models/models.dart';
 import '../services/database_helper.dart';
 
@@ -167,9 +168,7 @@ class _WeightChartScreenState extends State<WeightChartScreen> {
                       onPressed: () async {
                         final kg = double.tryParse(weightCtrl.text.trim().replaceAll(',', '.'));
                         if (kg == null || kg <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Geçerli bir ağırlık girin')),
-                          );
+                          showAppNotification(context, 'Geçerli bir ağırlık girin', isError: true);
                           return;
                         }
                         await DatabaseHelper.instance.insertWeightRecord(WeightRecord(

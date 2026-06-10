@@ -5,6 +5,8 @@ import '../services/database_helper.dart';
 import '../services/farm_manager.dart';
 import '../widgets/bottom_nav.dart';
 import 'reports_screen.dart';
+import 'backup_screen.dart';
+import '../services/user_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int navIndex;
@@ -239,11 +241,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final farmName = FarmManager.instance.activeFarm?.name ?? '—';
+    final userName = UserPreferences.instance.userName;
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12 ? 'GÜNAYDIN' : hour < 18 ? 'İYİ GÜNLER' : 'İYİ AKŞAMLAR';
+    final greetingLine = userName.isNotEmpty ? '$greeting, ${userName.toUpperCase()}' : greeting;
     return Scaffold(
       backgroundColor: AppColors.wool,
       body: Column(
         children: [
-          _DashboardHeader(stats: _stats, farmName: farmName, onFarmTap: _showFarmSwitcher),
+          _DashboardHeader(
+            stats: _stats,
+            farmName: farmName,
+            greeting: greetingLine,
+            onFarmTap: _showFarmSwitcher,
+            onAccountTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BackupScreen()),
+            ),
+          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadStats,
@@ -312,12 +327,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class _DashboardHeader extends StatelessWidget {
   final Map<String, int> stats;
   final String farmName;
+  final String greeting;
   final VoidCallback onFarmTap;
+  final VoidCallback onAccountTap;
 
   const _DashboardHeader({
     required this.stats,
     required this.farmName,
+    required this.greeting,
     required this.onFarmTap,
+    required this.onAccountTap,
   });
 
   @override
@@ -345,14 +364,26 @@ class _DashboardHeader extends StatelessWidget {
                 ),
               ),
             ),
+            Positioned(
+              top: 10,
+              right: 8,
+              child: SafeArea(
+                bottom: false,
+                child: IconButton(
+                  icon: const Icon(Icons.account_circle_outlined, color: AppColors.straw, size: 26),
+                  tooltip: 'Hesap & Yedekleme',
+                  onPressed: onAccountTap,
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'GÜNAYDIN, TUĞRUL BEY',
-                    style: TextStyle(
+                  Text(
+                    greeting,
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                       color: AppColors.mutedText,

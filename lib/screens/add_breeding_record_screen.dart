@@ -28,14 +28,13 @@ class _AddBreedingRecordScreenState extends State<AddBreedingRecordScreen> {
   DateTime _date = DateTime.now();
   DateTime? _expectedBirth;
   final _lambCtrl = TextEditingController();
-  final _partnerCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+  Sheep? _selectedRam;
   bool _isSaving = false;
 
   @override
   void dispose() {
     _lambCtrl.dispose();
-    _partnerCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -69,9 +68,8 @@ class _AddBreedingRecordScreenState extends State<AddBreedingRecordScreen> {
         date: _date,
         expectedBirth: _type == 'pregnancy' ? _expectedBirth : null,
         lambCount: lambCount > 0 ? lambCount : null,
-        partnerUid: _partnerCtrl.text.trim().isEmpty
-            ? null
-            : _partnerCtrl.text.trim(),
+        partnerUid: _selectedRam?.earTag,
+        partnerSheepId: _selectedRam?.id,
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       ),
     );
@@ -217,9 +215,66 @@ class _AddBreedingRecordScreenState extends State<AddBreedingRecordScreen> {
             ],
             if (_type == 'mating') ...[
               const SizedBox(height: 14),
-              _SectionLabel(text: 'Koç NFC UID (opsiyonel)'),
+              _SectionLabel(text: 'Koç (opsiyonel)'),
               const SizedBox(height: 6),
-              _Field(controller: _partnerCtrl, hint: '04:A3:2F:1B:9C:00:E1'),
+              GestureDetector(
+                onTap: () async {
+                  final picked = await SheepPickerSheet.show(
+                    context,
+                    farmId: widget.farmId,
+                    genderFilter: 'male',
+                    excludeSheepId: widget.sheepId,
+                  );
+                  if (picked != null) setState(() => _selectedRam = picked);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: _selectedRam != null
+                        ? Border.all(color: AppColors.sage.withValues(alpha: 0.5), width: 1.5)
+                        : null,
+                    boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 4, offset: const Offset(0, 1))],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.soil.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(child: Text('♂', style: TextStyle(fontSize: 16, color: AppColors.soil))),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _selectedRam == null
+                            ? const Text('Seçiniz', style: TextStyle(fontSize: 13, color: AppColors.mutedText))
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _selectedRam!.earTag,
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.soil),
+                                  ),
+                                  if (_selectedRam!.name != null)
+                                    Text(_selectedRam!.name!, style: const TextStyle(fontSize: 11, color: AppColors.mutedText)),
+                                ],
+                              ),
+                      ),
+                      if (_selectedRam != null)
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedRam = null),
+                          child: const Icon(Icons.close, size: 16, color: AppColors.mutedText),
+                        )
+                      else
+                        const Icon(Icons.chevron_right, size: 18, color: AppColors.mutedText),
+                    ],
+                  ),
+                ),
+              ),
             ],
             const SizedBox(height: 14),
             _SectionLabel(text: 'Not (opsiyonel)'),
